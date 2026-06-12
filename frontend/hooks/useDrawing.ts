@@ -91,12 +91,19 @@ export function useDrawing(sessionId: string): UseDrawingReturn {
           setPageState("success");
           // 3a:正常结束兜底全量清,防止已绘元素长期挂在"动画中"
           setAnimateIds(new Set());
+          // 不变式:终止路径上 commandHistory 不允许留 "processing" 条目
+          //  - 当前轮(currentItemRef)→ "done" + summary
+          //  - 任何残留 processing 孤儿(ref 失配的边角)→ 兜底 "error",绝不让转圈
           setCommandHistory((prev) =>
-            prev.map((it) =>
-              it.id === currentItemRef.current
-                ? { ...it, status: "done" as const, summary: summary || undefined }
-                : it,
-            ),
+            prev.map((it) => {
+              if (it.id === currentItemRef.current) {
+                return { ...it, status: "done" as const, summary: summary || undefined };
+              }
+              if (it.status === "processing") {
+                return { ...it, status: "error" as const };
+              }
+              return it;
+            }),
           );
           currentItemRef.current = null;
         },
@@ -105,9 +112,10 @@ export function useDrawing(sessionId: string): UseDrawingReturn {
           setErrorMessage(err.message);
           // 3a:错误同样全量清,半描元素不再卡在动画态
           setAnimateIds(new Set());
+          // 不变式:当前轮 + 任何残留 processing 条目,全部转 "error",离开 pending 态
           setCommandHistory((prev) =>
             prev.map((it) =>
-              it.id === currentItemRef.current
+              it.id === currentItemRef.current || it.status === "processing"
                 ? { ...it, status: "error" as const }
                 : it,
             ),
@@ -130,13 +138,19 @@ export function useDrawing(sessionId: string): UseDrawingReturn {
     setErrorMessage("");
     setClarifyMessage("");
     setAnimateIds(new Set());
-    // 将 processing 条目改为 error(中断)
+    // 不变式:中断路径同样不允许留 processing
+    //  - 当前轮 → "error" + summary "已中断"(HistoryItem 无 "stopped" 枚举,沿用 error)
+    //  - 残留 processing 孤儿 → 兜底 "error"
     setCommandHistory((prev) =>
-      prev.map((it) =>
-        it.id === currentItemRef.current
-          ? { ...it, status: "error" as const, summary: "已中断" }
-          : it,
-      ),
+      prev.map((it) => {
+        if (it.id === currentItemRef.current) {
+          return { ...it, status: "error" as const, summary: "已中断" };
+        }
+        if (it.status === "processing") {
+          return { ...it, status: "error" as const };
+        }
+        return it;
+      }),
     );
     currentItemRef.current = null;
   }, []);
