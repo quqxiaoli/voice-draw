@@ -16,7 +16,7 @@
 
 | event | data 结构 | 含义 |
 |---|---|---|
-| `token` | `{"content": <DrawCommand>}` | **一条完整绘图命令**(本项目修订:content 为命令对象而非文本增量,见 decisions.md D9) |
+| `token` | `<DrawCommand>` | **一条完整绘图命令**(本项目修订,见 decisions.md D9:data 即 DrawCommand 扁平结构,无 `content` 包装) |
 | `done` | `{"summary": "已画出:一个雪人(3个圆…)"}` | 正常结束;summary 供命令历史侧栏显示,可为空串 |
 | `error` | `{"error": "CODE", "message": "用户可读信息"}` | 流中出错,前端展示错误态,已执行命令保留 |
 
@@ -42,10 +42,10 @@
 - **成功响应**(HTTP 200):SSE 流,按上面三事件约定。token 事件序列示例:
 ```
 event: token
-data: {"content":{"op":"add","shape":{"id":"s1","kind":"circle","attrs":{"cx":200,"cy":300,"r":60,"stroke":"#333","fill":"none"}}}}
+data: {"op":"draw","id":"s1","shape":"circle","attrs":{"cx":200,"cy":300,"r":60,"stroke":"#333","fill":"none"}}
 
 event: token
-data: {"content":{"op":"add","shape":{"id":"s2","kind":"circle","attrs":{"cx":200,"cy":200,"r":45,"stroke":"#333","fill":"none"}}}}
+data: {"op":"draw","id":"s2","shape":"circle","attrs":{"cx":200,"cy":200,"r":45,"stroke":"#333","fill":"none"}}
 
 event: done
 data: {"summary":"已画出:雪人(身体、头部…)"}
@@ -77,38 +77,52 @@ data: {"summary":"已画出:雪人(身体、头部…)"}
 
 ### DrawCommand(DSL 核心,前端 TS / 后端 Go struct 逐字段对齐)
 
+> 真相源:`backend/internal/model/command.go`;前端 `frontend/lib/types.ts` 镜像。改任一边必须同步另一边。
+
 ```typescript
-type DrawCommand =
-  | { op: "add";     shape: Shape }                          // 新增图形
-  | { op: "modify";  target: string; attrs: Partial<Attrs> } // 修改:target=图形id
-  | { op: "delete";  target: string }                        // 删除指定图形
-  | { op: "undo" }                                           // 撤销上一条 add/modify/delete
-  | { op: "clear" }                                          // 清空画布
-  | { op: "clarify"; message: string }                       // 无法解析,message 为引导文案
+type Op =
+  | "draw" | "modify" | "delete"
+  | "undo" | "clear" | "clarify";
 
-type Shape = {
-  id: string          // 后端生成,s1/s2… 会话内递增唯一;modify/delete 的 target 引用它
-  kind: "circle" | "rect" | "line" | "triangle" | "path" | "text"
-  attrs: Attrs
-}
+type Shape =
+  | "circle" | "rect" | "ellipse" | "line"
+  | "polyline" | "polygon" | "path" | "text";
 
-type Attrs = {
-  // 几何(按 kind 取子集;画布固定 viewBox 0 0 800 600)
-  cx?: number; cy?: number; r?: number                     // circle
-  x?: number; y?: number; width?: number; height?: number  // rect / text 锚点
-  x1?: number; y1?: number; x2?: number; y2?: number       // line
-  points?: string                                          // triangle:"x1,y1 x2,y2 x3,y3"
-  d?: string                                               // path
-  content?: string                                         // text 文字内容
-  // 样式(所有 kind 通用)
-  stroke?: string      // CSS 颜色,默认 "#333"
-  fill?: string        // 默认 "none"
-  strokeWidth?: number // 默认 3
-  fontSize?: number    // text 用,默认 24
+// 顶层扁平,SSE token 事件 data 即此结构(无包装)
+interface DrawCommand {
+  op: Op;
+  id?: string;       // draw 时 LLM 赋语义化 id(如 "sun"/"tree-trunk");modify/delete 引用同一 id
+  shape?: Shape;     // 仅 op=draw 需要
+  attrs?: Record<string, string | number>; // SVG 属性透传,后端不枚举校验属性名
+  message?: string;  // 仅 op=clarify 需要
 }
 ```
 
+**按 op 的必填组合**(后端 `Validate()` 强制,不合法不下发):
+
+| op | 必填字段 |
+|---|---|
+| `draw`    | `id` + `shape` + 非空 `attrs` |
+| `modify`  | `id` + 非空 `attrs` |
+| `delete`  | `id` |
+| `undo`    | 无 |
+| `clear`   | 无 |
+| `clarify` | `message` |
+
+**attrs 透传约定**(LLM 产出参考,渲染端直接挂到 SVG 元素;新增属性零契约改动):
+
+- 画布 viewBox:`0 0 1000 750`
+- 几何(按 shape 取子集):
+  - `circle`: `cx`, `cy`, `r`
+  - `rect`: `x`, `y`, `width`, `height`
+  - `ellipse`: `cx`, `cy`, `rx`, `ry`
+  - `line`: `x1`, `y1`, `x2`, `y2`
+  - `polyline` / `polygon`: `points`("x1,y1 x2,y2 …")
+  - `path`: `d`
+  - `text`: `x`, `y`(锚点);文本内容放 `attrs.text`
+- 样式(任意 shape 通用,SVG 原生 kebab-case):`stroke`, `fill`, `stroke-width`, `font-size`, `transform`, `opacity` …
+
 **约束**:
-- `op` 与字段的合法组合以上面联合类型为准,出现未知 `op` 或缺必填字段 → 前端丢弃该条并 console.warn,不崩
-- `undo` 语义:弹出命令栈最后一条可撤销命令并重渲染;栈空时为 no-op
-- 后端在发出前校验每条命令结构(JSON Schema/struct 校验),不合法不下发——**前端的丢弃逻辑是双保险,不是主防线**
+- 出现未知 `op` 或缺必填字段 → 前端丢弃该条并 `console.warn`,不崩
+- `undo` 语义:弹出快照栈顶恢复上一态(对应一条 draw/modify/delete/clear);栈空时为 no-op
+- 后端发出前 struct 校验(见 `backend/internal/model/command.go::Validate`),不合法不下发——**前端的丢弃逻辑是双保险,不是主防线**
