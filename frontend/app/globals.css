@@ -49,72 +49,91 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* ── ui-spec 设计 token ── */
+  --bg:           #FAF9F6;
+  --surface:      #FFFFFF;
+  --text:         #3D3D3D;
+  --text-muted:   #8A8A85;
+  --brand:        #5C7A62;
+  --accent-soft:  #EAF0EB;
+  --border:       #E8E6E1;
+  --danger:       #C77B6E;
+  --danger-soft:  #F5E8E5;
+
+  /* ── shadcn 变量映射 ── */
+  --background:             var(--bg);
+  --foreground:             var(--text);
+  --card:                   var(--surface);
+  --card-foreground:        var(--text);
+  --popover:                var(--surface);
+  --popover-foreground:     var(--text);
+  --primary:                var(--brand);
+  --primary-foreground:     #FFFFFF;
+  --secondary:              var(--accent-soft);
+  --secondary-foreground:   var(--text);
+  --muted:                  var(--accent-soft);
+  --muted-foreground:       var(--text-muted);
+  --accent:                 var(--accent-soft);
+  --accent-foreground:      var(--text);
+  --destructive:            var(--danger);
+  --destructive-foreground: #FFFFFF;
+  --border:                 var(--border);
+  --input:                  var(--border);
+  --ring:                   var(--brand);
+
+  --radius: 0.625rem; /* 10px */
+
+  --sidebar:                   var(--bg);
+  --sidebar-foreground:        var(--text);
+  --sidebar-primary:           var(--brand);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent:            var(--accent-soft);
+  --sidebar-accent-foreground: var(--text);
+  --sidebar-border:            var(--border);
+  --sidebar-ring:              var(--brand);
+
+  --chart-1: var(--brand);
+  --chart-2: #A3B8A7;
+  --chart-3: #8BA392;
+  --chart-4: #6B8A73;
+  --chart-5: #4D6E56;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background:             #1A1D1C;
+  --foreground:             #E0E0DD;
+  --card:                   #242826;
+  --card-foreground:        #E0E0DD;
+  --popover:                #242826;
+  --popover-foreground:     #E0E0DD;
+  --primary:                #7C9A83;
+  --primary-foreground:     #FFFFFF;
+  --secondary:              #2A332D;
+  --secondary-foreground:   #E0E0DD;
+  --muted:                  #2A332D;
+  --muted-foreground:       #9A9A95;
+  --accent:                 #2A332D;
+  --accent-foreground:      #E0E0DD;
+  --destructive:            #D48B7E;
+  --destructive-foreground: #FFFFFF;
+  --border:                 #3A3D3A;
+  --input:                  #3A3D3A;
+  --ring:                   #7C9A83;
+
+  --sidebar:                   #1A1D1C;
+  --sidebar-foreground:        #E0E0DD;
+  --sidebar-primary:           #7C9A83;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent:            #2A332D;
+  --sidebar-accent-foreground: #E0E0DD;
+  --sidebar-border:            #3A3D3A;
+  --sidebar-ring:              #7C9A83;
+
+  --chart-1: #7C9A83;
+  --chart-2: #5A7A61;
+  --chart-3: #8BA392;
+  --chart-4: #A3B8A7;
+  --chart-5: #4D6E56;
 }
 
 @layer base {
@@ -123,8 +142,20 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-size: 15px;
+    line-height: 1.7;
   }
   html {
     @apply font-sans;
   }
+}
+
+/* ── 麦克风呼吸光圈动画 ── */
+@keyframes mic-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.35); opacity: 0.6; }
+}
+
+.animate-mic-breathe {
+  animation: mic-breathe 2s ease-in-out infinite;
 }
