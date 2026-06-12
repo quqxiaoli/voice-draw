@@ -13,9 +13,11 @@ interface CanvasProps {
   state: CanvasState;
   /** 本轮流式新画出的元素 id 集合,只有它们做描边动画(历史元素静态渲染) */
   animateIds: Set<string>;
+  /** 单元素描边结束后回调,上层据此从 animateIds 移除该 id(useDrawing.notifyAnimationDone) */
+  onAnimationDone?: (id: string) => void;
 }
 
-export default function Canvas({ state, animateIds }: CanvasProps) {
+export default function Canvas({ state, animateIds, onAnimationDone }: CanvasProps) {
   return (
     <svg
       viewBox="0 0 1000 750"
@@ -24,23 +26,40 @@ export default function Canvas({ state, animateIds }: CanvasProps) {
       aria-label="绘图画布"
     >
       {state.elements.map((el) => (
-        <ShapeEl key={el.id} el={el} animate={animateIds.has(el.id)} />
+        <ShapeEl
+          key={el.id}
+          el={el}
+          animate={animateIds.has(el.id)}
+          onAnimationDone={onAnimationDone}
+        />
       ))}
     </svg>
   );
 }
 
-function ShapeEl({ el, animate }: { el: CanvasElement; animate: boolean }) {
+function ShapeEl({
+  el,
+  animate,
+  onAnimationDone,
+}: {
+  el: CanvasElement;
+  animate: boolean;
+  onAnimationDone?: (id: string) => void;
+}) {
   const ref = useRef<SVGGraphicsElement | null>(null);
 
   useEffect(() => {
     if (!animate) return;
     const node = ref.current as (SVGGeometryElement & SVGGraphicsElement) | null;
-    if (!node || typeof node.getTotalLength !== "function") return; // text 等无长度,跳过
+    // text 等无 getTotalLength:无视觉描边可放,但仍需退出动画态,否则 id 会卡在集合里
+    if (!node || typeof node.getTotalLength !== "function") {
+      onAnimationDone?.(el.id);
+      return;
+    }
 
     let len = 0;
-    try { len = node.getTotalLength(); } catch { return; }
-    if (!len) return;
+    try { len = node.getTotalLength(); } catch { onAnimationDone?.(el.id); return; }
+    if (!len) { onAnimationDone?.(el.id); return; }
 
     const fill = node.getAttribute("fill");
     node.style.transition = "none";
@@ -52,7 +71,20 @@ function ShapeEl({ el, animate }: { el: CanvasElement; animate: boolean }) {
     node.style.transition = `stroke-dashoffset ${STROKE_MS}ms ease, fill-opacity 250ms ease ${STROKE_MS}ms`;
     node.style.strokeDashoffset = "0";
     if (fill && fill !== "none") node.style.fillOpacity = "1";
-  }, [animate]);
+
+    // 监听 stroke-dashoffset 过渡结束 = 一笔描完;fill-opacity 渐显走 inline 样式,不依赖 animateIds
+    const handleEnd = (e: Event) => {
+      const te = e as TransitionEvent;
+      if (te.propertyName !== "stroke-dashoffset") return;
+      node.removeEventListener("transitionend", handleEnd);
+      onAnimationDone?.(el.id);
+    };
+    node.addEventListener("transitionend", handleEnd);
+
+    return () => {
+      node.removeEventListener("transitionend", handleEnd);
+    };
+  }, [animate, el.id, onAnimationDone]);
 
   const { shape, attrs } = el;
   const common = {
