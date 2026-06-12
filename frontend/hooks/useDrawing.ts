@@ -22,7 +22,7 @@ export type PageState = "idle" | "streaming" | "success" | "error";
 export interface HistoryItem {
   id: string;
   instruction: string;
-  status: "processing" | "done" | "error";
+  status: "processing" | "done" | "error" | "hint";
   summary?: string;
 }
 
@@ -60,6 +60,8 @@ export function useDrawing(sessionId: string): UseDrawingReturn {
   const historyRef = useRef<DrawingHistory>(emptyHistory()); // 与 setHistory 同步的最新快照
   const streamRef = useRef<StreamHandle | null>(null);
   const currentItemRef = useRef<string | null>(null);
+  // 本轮是否执行过真实绘图命令(非 clarify),用于 onDone 区分 hint/done
+  const hasDrawCommandRef = useRef(false);
 
   // ── processQueue:从队列取一条执行,按命令类型控制节奏 ──
   const processQueue = useCallback(() => {
@@ -84,6 +86,11 @@ export function useDrawing(sessionId: string): UseDrawingReturn {
     const result = applyCommand(historyRef.current, cmd);
     historyRef.current = result.history;
     setHistory(result.history);
+
+    // 标记本轮有真实绘图命令(非 clarify),用于 onDone 区分 hint/done
+    if (cmd.op !== "clarify") {
+      hasDrawCommandRef.current = true;
+    }
 
     // executor 层 clarify 兜底
     if (result.clarify) {
@@ -141,6 +148,7 @@ export function useDrawing(sessionId: string): UseDrawingReturn {
       queueRef.current = [];
       processingRef.current = false;
       waitingDrawRef.current = false;
+      hasDrawCommandRef.current = false;
       ++phaseRef.current;
 
       // 新轮开始:重置动画集与提示信息(history 保留,画布不清空)
@@ -169,12 +177,13 @@ export function useDrawing(sessionId: string): UseDrawingReturn {
           setPageState("success");
           // 不再全量清 animateIds:让队列自然排空,最后一笔动画播完自动清
           const itemId = currentItemRef.current;
+          const finalStatus = hasDrawCommandRef.current ? ("done" as const) : ("hint" as const);
           setCommandHistory((prev) =>
             prev.map((it) =>
               it.id === itemId
                 ? {
                     ...it,
-                    status: "done" as const,
+                    status: finalStatus,
                     summary: summary || undefined,
                   }
                 : it,

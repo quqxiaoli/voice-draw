@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Check, Loader2, AlertCircle } from "lucide-react";
+import { Check, Loader2, AlertCircle, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type CommandStatus = "done" | "processing" | "error";
+type CommandStatus = "done" | "processing" | "error" | "hint";
 
 export interface HistoryItem {
   id: string;
@@ -31,6 +31,11 @@ const statusConfig: Record<
     label: "失败",
     icon: AlertCircle,
     className: "text-destructive",
+  },
+  hint: {
+    label: "提示",
+    icon: Lightbulb,
+    className: "text-[var(--brand)]",
   },
 };
 
