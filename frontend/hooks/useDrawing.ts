@@ -6,7 +6,7 @@
 // 导致所有元素同帧挂载、描边动画同时开跑的问题。
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { streamDraw, type StreamHandle } from "@/lib/stream";
 import {
   applyCommand,
@@ -51,6 +51,13 @@ export function useDrawing(sessionId: string): UseDrawingReturn {
   const [errorMessage, setErrorMessage] = useState("");
   const [clarifyMessage, setClarifyMessage] = useState("");
   const [commandHistory, setCommandHistory] = useState<HistoryItem[]>([]);
+
+  // pageStateRef:供 submitInstruction 同步守卫使用,避免把 pageState 放进 useCallback 依赖
+  // 导致每次态切换 submit 引用变 → InputBar/page 子树重建。
+  const pageStateRef = useRef<PageState>("idle");
+  useEffect(() => {
+    pageStateRef.current = pageState;
+  }, [pageState]);
 
   // ── 命令队列(逐笔节奏控制) ──
   const queueRef = useRef<DrawCommand[]>([]);
@@ -139,7 +146,9 @@ export function useDrawing(sessionId: string): UseDrawingReturn {
     (text: string) => {
       const trimmed = text.trim();
       if (!trimmed) return;
-      if (pageState === "streaming") return;
+      if (pageStateRef.current === "streaming") return;
+      // 同步占位,挡住同事件循环内的二次提交(setPageState 异步,光靠 React state 来不及)
+      pageStateRef.current = "streaming";
 
       // 中断前一个流
       streamRef.current?.abort();
@@ -213,8 +222,7 @@ export function useDrawing(sessionId: string): UseDrawingReturn {
 
       streamRef.current = handle;
     },
-    // TODO(useDrawing): pageState 依赖导致每次状态切换 submit 引用变,InputBar/page 重建子树。后续用 pageStateRef 解耦。
-    [sessionId, pageState, processQueue],
+    [sessionId, processQueue],
   );
 
   // ── stop(用户主动中断) ──
