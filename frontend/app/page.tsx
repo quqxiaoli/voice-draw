@@ -1,117 +1,38 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useMemo } from "react";
 import Canvas from "@/components/Canvas";
 import InputBar from "@/components/InputBar";
 import CommandHistory from "@/components/CommandHistory";
-import { applyCommand, emptyHistory, type DrawingHistory } from "@/lib/executor";
-import type { DrawCommand } from "@/lib/types";
+import { useDrawing } from "@/hooks/useDrawing";
 
-/* ── 四态定义 ── */
-type PageState = "idle" | "streaming" | "success" | "error";
-
-/* ── mock 演示命令序列:太阳 + 树 ── */
-const DEMO_COMMANDS: DrawCommand[] = [
-  {
-    op: "draw", id: "sky", shape: "rect",
-    attrs: { x: 0, y: 0, width: 1000, height: 380, fill: "#D4E8F0", stroke: "none" },
-  },
-  {
-    op: "draw", id: "sun", shape: "circle",
-    attrs: { cx: 800, cy: 150, r: 55, fill: "#F4C542", stroke: "#E0A800", "stroke-width": 2 },
-  },
-  {
-    op: "draw", id: "ground", shape: "rect",
-    attrs: { x: 0, y: 380, width: 1000, height: 370, fill: "#C8D8A0", stroke: "none" },
-  },
-  {
-    op: "draw", id: "trunk", shape: "rect",
-    attrs: { x: 160, y: 280, width: 30, height: 130, fill: "#8B6914", stroke: "#6B4F12", "stroke-width": 2 },
-  },
-  {
-    op: "draw", id: "crown", shape: "circle",
-    attrs: { cx: 175, cy: 250, r: 75, fill: "#7C9A83", stroke: "#5A7A61", "stroke-width": 2 },
-  },
-];
-
-/* ── 示例指令（空态引导） ── */
-const EXAMPLE_COMMANDS = [
-  "画一个红色的圆",
-  "在左下角画一棵绿树",
-  "把天空变成浅蓝色",
-];
+/* ── session_id:浏览器会话级唯一标识 ── */
+function getSessionId(): string {
+  if (typeof window === "undefined") return "";
+  const stored = sessionStorage.getItem("voice_draw_session_id");
+  if (stored) return stored;
+  const id = crypto.randomUUID();
+  sessionStorage.setItem("voice_draw_session_id", id);
+  return id;
+}
 
 export default function Page() {
-  const [pageState, setPageState] = useState<PageState>("idle");
-  const [history, setHistory] = useState<DrawingHistory>(emptyHistory);
-  const [animateIds, setAnimateIds] = useState<Set<string>>(new Set());
-  const [errorMessage, setErrorMessage] = useState<string>("");
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const stepRef = useRef(0);
+  const sessionId = useMemo(() => getSessionId(), []);
 
-  /* ── 清理 timer ── */
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, []);
+  const {
+    pageState,
+    history,
+    animateIds,
+    errorMessage,
+    clarifyMessage,
+    commandHistory,
+    submitInstruction,
+    stop,
+    notifyAnimationDone,
+  } = useDrawing(sessionId);
 
-  /* ── 执行 mock 演示 ── */
-  const runDemo = useCallback(() => {
-    // 重置
-    stepRef.current = 0;
-    setHistory(emptyHistory());
-    setAnimateIds(new Set());
-    setPageState("streaming");
-    setErrorMessage("");
-
-    timerRef.current = setInterval(() => {
-      stepRef.current += 1;
-      const idx = stepRef.current - 1;
-
-      if (idx >= DEMO_COMMANDS.length) {
-        // 全部执行完毕 → 成功态
-        if (timerRef.current) clearInterval(timerRef.current);
-        timerRef.current = null;
-        setPageState("success");
-        return;
-      }
-
-      const cmd = DEMO_COMMANDS[idx];
-      setHistory((prev) => {
-        const result = applyCommand(prev, cmd);
-        if (result.clarify) {
-          // clarify 走错误态（柔和提示）
-          setErrorMessage(result.clarify);
-          setPageState("error");
-          if (timerRef.current) clearInterval(timerRef.current);
-          timerRef.current = null;
-        }
-        // 标记新元素为 animated
-        if (cmd.id) {
-          const elId: string = cmd.id;
-          setAnimateIds((prev) => new Set(prev).add(elId));
-        }
-        return result.history;
-      });
-    }, 300);
-  }, []);
-
-  /* ── 手动切换四态（TODO:接线后删除） ── */
-  const switchState = (s: PageState) => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = null;
-    setPageState(s);
-    if (s === "idle") {
-      setHistory(emptyHistory());
-      setAnimateIds(new Set());
-      setErrorMessage("");
-    } else if (s === "error") {
-      setErrorMessage("抱歉,我没有理解你的指令,换个说法试试?");
-    }
-  };
-
-  const isInputDisabled = pageState === "streaming";
+  const isStreaming = pageState === "streaming";
+  const isIdle = pageState === "idle";
 
   return (
     <main className="flex min-h-screen flex-col bg-background">
@@ -139,26 +60,35 @@ export default function Page() {
           className="mx-6 mt-4 flex items-center gap-3 rounded-[10px] px-4 py-3 text-sm"
           style={{ background: "var(--danger-soft)", color: "var(--danger)" }}
         >
-          <span className="text-base leading-none" aria-hidden="true">⚠</span>
+          <span className="text-base leading-none" aria-hidden="true">
+            ⚠
+          </span>
           <span className="flex-1">{errorMessage || "发生了一个错误,请重试"}</span>
-          <button
-            type="button"
-            onClick={() => switchState("idle")}
-            className="rounded-[10px] border px-3 py-1 text-xs transition-colors hover:opacity-80"
-            style={{ borderColor: "var(--danger)", color: "var(--danger)" }}
-          >
-            重试
-          </button>
         </div>
       )}
 
-      {/* ── Clarify 提示条(复用同一组件,换 accent-soft 底) ── */}
-      {pageState === "success" && (
+      {/* ── Clarify 提示条(柔和,不动画布) ── */}
+      {clarifyMessage && pageState !== "error" && (
         <div
           className="mx-6 mt-4 flex items-center gap-3 rounded-[10px] px-4 py-3 text-sm"
           style={{ background: "var(--accent-soft)", color: "var(--brand)" }}
         >
-          <span className="text-base leading-none" aria-hidden="true">✓</span>
+          <span className="text-base leading-none" aria-hidden="true">
+            💡
+          </span>
+          <span className="flex-1">{clarifyMessage}</span>
+        </div>
+      )}
+
+      {/* ── 成功提示条 ── */}
+      {pageState === "success" && !clarifyMessage && (
+        <div
+          className="mx-6 mt-4 flex items-center gap-3 rounded-[10px] px-4 py-3 text-sm"
+          style={{ background: "var(--accent-soft)", color: "var(--brand)" }}
+        >
+          <span className="text-base leading-none" aria-hidden="true">
+            ✓
+          </span>
           <span className="flex-1">绘制完成！你可以继续用语音或文字修改画面</span>
         </div>
       )}
@@ -178,40 +108,44 @@ export default function Page() {
                   用语音或文字绘制的内容会显示在这里
                 </p>
               </div>
-              {/* 流式中:停止按钮占位 */}
-              {pageState === "streaming" && (
-                <button
-                  type="button"
-                  disabled
-                  className="rounded-[10px] border border-border px-3 py-1 text-xs text-muted-foreground"
-                >
-                  停止生成
-                </button>
+              {/* 流式指示 */}
+              {isStreaming && (
+                <span className="rounded-[10px] border border-border px-3 py-1 text-xs text-muted-foreground animate-pulse">
+                  生成中…
+                </span>
               )}
             </header>
 
-            {/* 空态:引导文案 + 示例入口 */}
-            {pageState === "idle" ? (
+            {/* 空态 */}
+            {isIdle && history.present.elements.length === 0 ? (
               <div className="flex flex-1 flex-col items-center justify-center gap-6 rounded-[10px] border border-dashed border-border bg-secondary">
                 <p className="text-center text-sm text-muted-foreground">
                   试着说一句「画一个橙色的太阳,再在左边画一棵树」吧
                 </p>
                 <div className="flex flex-wrap justify-center gap-2">
-                  {EXAMPLE_COMMANDS.map((cmd) => (
-                    <button
-                      key={cmd}
-                      type="button"
-                      className="rounded-[10px] border border-border bg-card px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-secondary"
-                    >
-                      {cmd}
-                    </button>
-                  ))}
+                  {["画一个红色的圆", "在左下角画一棵绿树", "把天空变成浅蓝色"].map(
+                    (cmd) => (
+                      <button
+                        key={cmd}
+                        type="button"
+                        disabled={isStreaming}
+                        onClick={() => submitInstruction(cmd)}
+                        className="rounded-[10px] border border-border bg-card px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-secondary disabled:opacity-50"
+                      >
+                        {cmd}
+                      </button>
+                    ),
+                  )}
                 </div>
               </div>
             ) : (
               /* 非空态:挂载 Canvas */
               <div className="flex-1 rounded-[10px] overflow-hidden">
-                <Canvas state={history.present} animateIds={animateIds} />
+                <Canvas
+                  state={history.present}
+                  animateIds={animateIds}
+                  onAnimationDone={notifyAnimationDone}
+                />
               </div>
             )}
           </section>
@@ -219,51 +153,25 @@ export default function Page() {
 
         {/* 指令历史 */}
         <div className="lg:w-[30%]">
-          <CommandHistory />
+          <CommandHistory
+            items={commandHistory.map((item) => ({
+              id: item.id,
+              instruction: item.instruction,
+              status: item.status,
+              summary: item.summary,
+            }))}
+          />
         </div>
       </div>
 
       {/* ── 底部输入栏 ── */}
       <div className="px-6 pb-6">
-        <InputBar disabled={isInputDisabled} />
-      </div>
-
-      {/* ── TODO:接线后删除此四态切换按钮 ── */}
-      <div className="fixed bottom-4 right-4 z-50 flex gap-2 rounded-[10px] border border-border bg-card p-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <span className="self-center text-[10px] text-muted-foreground mr-1">
-          TODO:接线后删除
-        </span>
-        {(["idle", "streaming", "success", "error"] as PageState[]).map(
-          (s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => switchState(s)}
-              className={`rounded-[10px] border px-2 py-1 text-[11px] transition-colors ${
-                pageState === s
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-foreground hover:bg-secondary"
-              }`}
-            >
-              {s === "idle"
-                ? "空态"
-                : s === "streaming"
-                  ? "流式中"
-                  : s === "success"
-                    ? "成功"
-                    : "错误"}
-            </button>
-          )
-        )}
-        {/* 演示按钮 */}
-        <button
-          type="button"
-          onClick={runDemo}
-          disabled={pageState === "streaming"}
-          className="rounded-[10px] border border-primary bg-primary px-2 py-1 text-[11px] text-primary-foreground transition-colors hover:opacity-90 disabled:opacity-50"
-        >
-          演示
-        </button>
+        <InputBar
+          onSubmit={submitInstruction}
+          isStreaming={isStreaming}
+          onStop={stop}
+          pageState={pageState}
+        />
       </div>
     </main>
   );
