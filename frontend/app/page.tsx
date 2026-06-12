@@ -33,6 +33,7 @@ export default function Page() {
 
   const isStreaming = pageState === "streaming";
   const isIdle = pageState === "idle";
+  const showEmpty = isIdle && history.present.elements.length === 0;
 
   return (
     <main className="flex h-screen flex-col bg-background">
@@ -53,49 +54,6 @@ export default function Page() {
           测试版
         </span>
       </header>
-
-      {/* ── 错误提示条 ── */}
-      {pageState === "error" && (
-        <div
-          className="shrink-0 mx-6 mt-4 flex items-center gap-3 rounded-[10px] px-4 py-3 text-sm"
-          style={{ background: "var(--danger-soft)", color: "var(--danger)" }}
-        >
-          <span className="text-base leading-none" aria-hidden="true">
-            ⚠
-          </span>
-          <span className="flex-1">{errorMessage || "发生了一个错误,请重试"}</span>
-        </div>
-      )}
-
-      {/* ── Clarify 提示条(柔和,不动画布) ── */}
-      {clarifyMessage && pageState !== "error" && (
-        <div
-          className="shrink-0 mx-6 mt-4 flex items-center gap-3 rounded-[10px] px-4 py-3 text-sm"
-          style={{ background: "var(--accent-soft)", color: "var(--brand)" }}
-        >
-          <span className="text-base leading-none" aria-hidden="true">
-            💡
-          </span>
-          <span className="flex-1">{clarifyMessage}</span>
-        </div>
-      )}
-
-      {/* ── 成功提示条 ── */}
-      {pageState === "success" && !clarifyMessage && (
-        <div
-          className="shrink-0 mx-6 mt-4 flex items-center gap-3 rounded-[10px] px-4 py-3 text-sm"
-          style={{ background: "var(--accent-soft)", color: "var(--brand)" }}
-        >
-          <span className="text-base leading-none" aria-hidden="true">
-            ✓
-          </span>
-          <span className="flex-1">
-            {history.present.elements.length === 0
-              ? '已清空,说"撤销"可以找回'
-              : "绘制完成！你可以继续用语音或文字修改画面"}
-          </span>
-        </div>
-      )}
 
       {/* ── 主区域:左70% 画布 / 右30% 历史 ── */}
       <div className="flex-1 min-h-0 flex flex-col gap-6 p-6 lg:flex-row">
@@ -120,9 +78,13 @@ export default function Page() {
               )}
             </header>
 
-            {/* 空态 */}
-            {isIdle && history.present.elements.length === 0 ? (
-              <div className="flex flex-1 flex-col items-center justify-center gap-6 rounded-[10px] border border-dashed border-border bg-secondary">
+            {/* 画布主区:空态/Canvas 同容器叠放,opacity 切换,容器高度恒定;
+                提示条 overlay 浮在顶部,不挤压主区域(消除提交瞬间布局跳变) */}
+            <div className="relative flex-1 min-h-0">
+              {/* 空态 */}
+              <div
+                className={`absolute inset-0 flex flex-col items-center justify-center gap-6 rounded-[10px] border border-dashed border-border bg-secondary transition-opacity duration-150 ${showEmpty ? "opacity-100" : "pointer-events-none opacity-0"}`}
+              >
                 <p className="text-center text-sm text-muted-foreground">
                   试着说一句「画一个橙色的太阳,再在左边画一棵树」吧
                 </p>
@@ -142,16 +104,61 @@ export default function Page() {
                   )}
                 </div>
               </div>
-            ) : (
-              /* 非空态:挂载 Canvas */
-              <div className="flex-1 min-h-0 rounded-[10px] overflow-hidden">
+
+              {/* Canvas */}
+              <div
+                className={`absolute inset-0 rounded-[10px] overflow-hidden transition-opacity duration-150 ${showEmpty ? "pointer-events-none opacity-0" : "opacity-100"}`}
+              >
                 <Canvas
                   state={history.present}
                   animateIds={animateIds}
                   onAnimationDone={notifyAnimationDone}
                 />
               </div>
-            )}
+
+              {/* 提示条 overlay:画布顶部浮动,pointer-events-none 容器 + auto 子项,不拦截画布点击 */}
+              <div className="pointer-events-none absolute inset-x-2 top-2 z-10 flex flex-col gap-2">
+                {pageState === "error" && (
+                  <div
+                    className="pointer-events-auto flex items-center gap-3 rounded-[10px] px-4 py-3 text-sm shadow-sm"
+                    style={{ background: "var(--danger-soft)", color: "var(--danger)" }}
+                  >
+                    <span className="text-base leading-none" aria-hidden="true">
+                      ⚠
+                    </span>
+                    <span className="flex-1">
+                      {errorMessage || "发生了一个错误,请重试"}
+                    </span>
+                  </div>
+                )}
+                {clarifyMessage && pageState !== "error" && (
+                  <div
+                    className="pointer-events-auto flex items-center gap-3 rounded-[10px] px-4 py-3 text-sm shadow-sm"
+                    style={{ background: "var(--accent-soft)", color: "var(--brand)" }}
+                  >
+                    <span className="text-base leading-none" aria-hidden="true">
+                      💡
+                    </span>
+                    <span className="flex-1">{clarifyMessage}</span>
+                  </div>
+                )}
+                {pageState === "success" && !clarifyMessage && (
+                  <div
+                    className="pointer-events-auto flex items-center gap-3 rounded-[10px] px-4 py-3 text-sm shadow-sm"
+                    style={{ background: "var(--accent-soft)", color: "var(--brand)" }}
+                  >
+                    <span className="text-base leading-none" aria-hidden="true">
+                      ✓
+                    </span>
+                    <span className="flex-1">
+                      {history.present.elements.length === 0
+                        ? '已清空,说"撤销"可以找回'
+                        : "绘制完成！你可以继续用语音或文字修改画面"}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
           </section>
         </div>
 
