@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, type FormEvent } from "react";
+import { useState, useCallback, useEffect, useRef, type FormEvent } from "react";
 import { Mic, Send, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSpeech } from "@/hooks/useSpeech";
@@ -20,32 +20,47 @@ export default function InputBar({
   pageState,
 }: InputBarProps) {
   const [inputValue, setInputValue] = useState("");
+  // 上次成功提交的文本:挡住静默定时器/isFinal/手动点击 同事件循环或紧邻两次相同提交;
+  // pageState 离开 streaming 时清,允许后续重提交相同指令。
+  const lastSubmittedRef = useRef("");
+
+  // 单一提交入口:trim + isStreaming 守卫 + 同文本去重,所有路径(手动/语音)都走这里
+  const submit = useCallback(
+    (text: string) => {
+      if (isStreaming) return;
+      const t = text.trim();
+      if (!t) return;
+      if (t === lastSubmittedRef.current) return;
+      lastSubmittedRef.current = t;
+      onSubmit(t);
+    },
+    [isStreaming, onSubmit],
+  );
 
   const handleFinalResult = useCallback(
     (text: string) => {
+      // 流式期间禁止语音 final 写回输入框/提交,丢弃 interim 残留,避免覆盖正在流式渲染的内容
+      if (isStreaming) return;
       // 语音 final:把识别文本写回输入框(替换旧内容),提交后由迟清 effect 处理清空
       setInputValue(text);
-      onSubmit(text);
+      submit(text);
     },
-    [onSubmit],
+    [isStreaming, submit],
   );
 
-  const { isSupported, isListening, interimText, startListening } =
+  const { isSupported, isListening, liveText, startListening, stopAndSubmit } =
     useSpeech(handleFinalResult);
 
-  // 语音中间结果实时回显到输入框
-  const displayValue = isListening && interimText ? interimText : inputValue;
+  // 识别期间:输入框显示 hook 的 liveText(已 final 累积 + 当前 interim);
+  // 流式期间锁定 inputValue,即使 liveText 仍有残留也不显示,防止覆盖用户上下文
+  const displayValue = isStreaming ? inputValue : isListening ? liveText : inputValue;
 
   const handleSubmit = useCallback(
     (e?: FormEvent) => {
       e?.preventDefault();
-      if (isStreaming) return;
-      const text = inputValue.trim();
-      if (!text) return;
-      // 不在此处清空:错误态保留文本便于直接重试,只在 success 时由 effect 清
-      onSubmit(text);
+      submit(inputValue);
     },
-    [inputValue, isStreaming, onSubmit],
+    [inputValue, submit],
   );
 
   // #2 迟清:pageState → success 时清空输入框
@@ -53,12 +68,20 @@ export default function InputBar({
     if (pageState === "success") {
       setInputValue("");
     }
+    // 离开 streaming(success/error/idle):放开同文本去重,允许重试或再次提交相同指令
+    if (pageState !== "streaming") {
+      lastSubmittedRef.current = "";
+    }
   }, [pageState]);
 
+  // 麦克风 toggle:未录则开始;已录则立即提交并停止(用户主动结束,免等 1.2s 静默)
   const handleMicClick = useCallback(() => {
-    if (isListening) return; // 已在录音中
-    startListening();
-  }, [isListening, startListening]);
+    if (isListening) {
+      stopAndSubmit();
+    } else {
+      startListening();
+    }
+  }, [isListening, startListening, stopAndSubmit]);
 
   return (
     <form
@@ -77,7 +100,7 @@ export default function InputBar({
           )}
           <button
             type="button"
-            aria-label={isListening ? "录音中" : "开始录音"}
+            aria-label={isListening ? "结束录音并提交" : "开始录音"}
             disabled={isStreaming}
             onClick={handleMicClick}
             className={`relative z-10 flex size-14 items-center justify-center rounded-full transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 ${
