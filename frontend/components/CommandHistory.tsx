@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Check, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +41,15 @@ interface CommandHistoryProps {
 export default function CommandHistory({
   items = [],
 }: CommandHistoryProps) {
+  const listRef = useRef<HTMLOListElement>(null);
+
+  // 新条目进入时自动滚到底部
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [items]);
+
   return (
     <aside
       aria-label="指令历史"
@@ -55,7 +65,7 @@ export default function CommandHistory({
           暂无指令,试着说一句吧
         </p>
       ) : (
-        <ol className="flex flex-1 flex-col gap-2 overflow-y-auto">
+        <ol ref={listRef} className="flex flex-1 flex-col gap-2 overflow-y-auto">
           {items.map((cmd) => {
             const { label, icon: Icon, className } =
               statusConfig[cmd.status] ?? statusConfig.error;

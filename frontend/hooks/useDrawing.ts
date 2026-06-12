@@ -185,6 +185,7 @@ export function useDrawing(sessionId: string): UseDrawingReturn {
         onError(err: { code: string; message: string }) {
           setPageState("error");
           setErrorMessage(err.message);
+          setClarifyMessage("");
           // 清空队列:错误后不再执行未处理的命令(已执行的保留)
           queueRef.current = [];
           processingRef.current = false;
