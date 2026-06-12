@@ -30,11 +30,11 @@ export default function InputBar({
     [onSubmit],
   );
 
-  const { isSupported, isListening, interimText, startListening } =
+  const { isSupported, isListening, liveText, startListening, stopAndSubmit } =
     useSpeech(handleFinalResult);
 
-  // 语音中间结果实时回显到输入框
-  const displayValue = isListening && interimText ? interimText : inputValue;
+  // 识别期间:输入框显示 hook 的 liveText(已 final 累积 + 当前 interim);否则显示用户输入
+  const displayValue = isListening ? liveText : inputValue;
 
   const handleSubmit = useCallback(
     (e?: FormEvent) => {
@@ -55,10 +55,14 @@ export default function InputBar({
     }
   }, [pageState]);
 
+  // 麦克风 toggle:未录则开始;已录则立即提交并停止(用户主动结束,免等 1.2s 静默)
   const handleMicClick = useCallback(() => {
-    if (isListening) return; // 已在录音中
-    startListening();
-  }, [isListening, startListening]);
+    if (isListening) {
+      stopAndSubmit();
+    } else {
+      startListening();
+    }
+  }, [isListening, startListening, stopAndSubmit]);
 
   return (
     <form
@@ -77,7 +81,7 @@ export default function InputBar({
           )}
           <button
             type="button"
-            aria-label={isListening ? "录音中" : "开始录音"}
+            aria-label={isListening ? "结束录音并提交" : "开始录音"}
             disabled={isStreaming}
             onClick={handleMicClick}
             className={`relative z-10 flex size-14 items-center justify-center rounded-full transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 ${
