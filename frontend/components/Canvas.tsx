@@ -9,6 +9,23 @@ import type { CanvasState, CanvasElement } from "@/lib/executor";
 
 const STROKE_MS = 600; // ui-spec:动效克制,只此一种 + 150ms 状态过渡
 
+// 契约 attrs 用 SVG 原生 kebab-case(api-contract.md 共享类型节);React JSX 要求 camelCase。
+// data-*/aria-* 是 React 唯二保留 kebab 的命名空间,跳过。
+function toCamel(key: string): string {
+  if (key.startsWith("data-") || key.startsWith("aria-")) return key;
+  return key.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+}
+
+function camelizeAttrs(
+  attrs: Record<string, string | number>,
+): Record<string, string | number> {
+  const out: Record<string, string | number> = {};
+  for (const [k, v] of Object.entries(attrs)) {
+    out[toCamel(k)] = v;
+  }
+  return out;
+}
+
 interface CanvasProps {
   state: CanvasState;
   /** 本轮流式新画出的元素 id 集合,只有它们做描边动画(历史元素静态渲染) */
@@ -87,16 +104,18 @@ function ShapeEl({
   }, [animate, el.id, onAnimationDone]);
 
   const { shape, attrs } = el;
+  // 先把 kebab attrs 一次性转 camel,后续 common/rest/text 分支统一从 cAttrs 取
+  const cAttrs = camelizeAttrs(attrs);
   const common = {
     ref: ref as never,
-    stroke: (attrs.stroke as string) ?? "#3D3D3D",
-    strokeWidth: attrs["stroke-width"] ?? 3,
-    fill: (attrs.fill as string) ?? "none",
+    stroke: (cAttrs.stroke as string) ?? "#3D3D3D",
+    strokeWidth: cAttrs.strokeWidth ?? 3,
+    fill: (cAttrs.fill as string) ?? "none",
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
   };
   // 透传剩余属性,剔除已显式处理的与 text 内容
-  const { stroke, fill, text, ...rest } = attrs as Record<string, never> & {
+  const { stroke, fill, text, ...rest } = cAttrs as Record<string, never> & {
     stroke?: string; fill?: string; text?: string;
   };
 
@@ -110,7 +129,7 @@ function ShapeEl({
     case "path":     return <path     {...common} {...rest} />;
     case "text":
       return (
-        <text {...rest} fill={(attrs.fill as string) ?? "#3D3D3D"} stroke="none">
+        <text {...rest} fill={(cAttrs.fill as string) ?? "#3D3D3D"} stroke="none">
           {text ?? ""}
         </text>
       );
