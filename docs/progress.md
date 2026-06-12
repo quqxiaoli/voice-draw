@@ -19,7 +19,7 @@ docker compose up      # 后端 :8080 / 前端 :3000
 - **更新人/工具**:本人 + 架构窗口
 
 ## 正在做
-- v0 生成静态页面壳(布局:画布 70% + 历史侧栏 30% + 底部输入栏,日系简洁)
+- 无(静态壳已落库,待接线 PR)
 
 ## 已完成(最近几项)
 - 骨架三 PR 已 merge,main 可编译可运行:
@@ -28,10 +28,11 @@ docker compose up      # 后端 :8080 / 前端 :3000
   - PR-C 前端绘图引擎:types.ts(契约类型)/ stream.ts(SSE 客户端,fetch 手解,带中断)/ executor.ts(命令执行器,快照栈 undo)/ Canvas.tsx(描边动画)
 - 后端主链路 curl 实测通过:"画一个红色的圆" → token 事件流 + done
 - 决策 D12(取消实测,假设化推进:DeepSeek 主选 / 混合指令策略 / 文本框降级通道)已记 decisions.md
+- 静态壳落库:globals.css 替换为 ui-spec 设计 token;创建 InputBar/CommandHistory/page.tsx(page.tsx 含四态 + mock 演示 + Canvas 描边动画);layout.tsx 改标题和 lang;v0-draft 已删除
 
 ## 下一步(严格按序)
-1. [手] v0 出静态壳(3–5 轮预算,只迭代到布局对),Download 取 page.tsx + 自定义组件
-2. [DS·B级] 静态壳落库 PR:v0 只取布局 JSX,硬编码值换 ui-spec token;画布区挂已有 Canvas.tsx + mock 命令演示描边动画;四态(空/流式/成功/错误)+ 切换按钮
+1. [手] v0 出静态壳 — ✅ 完成
+2. [DS·B级] 静态壳落库 PR — ✅ 完成(本任务)
 3. [DS·A级] 接线 PR:useDrawing hook(streamDraw → applyCommand → animateIds)+ Web Speech hook(zh-CN, interimResults)+ 文本框同链路 + 流式中禁用/停止按钮;session_id 用 crypto.randomUUID() 存 sessionStorage —— merge 前过一次 Claude Code review(对照 api-contract 三事件)
 4. 联调:"画一个房子→把它改成蓝色→撤销"三连,键盘 + 语音各一遍
 5. DS 杂务队列(不阻塞主线,穿插做):parser 表驱动测试 / session TTL / CORS 白名单化 / smoke.sh

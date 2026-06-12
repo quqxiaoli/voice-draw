@@ -40,6 +40,7 @@ export function applyCommand(h: DrawingHistory, cmd: DrawCommand): ApplyResult {
       const elements = exists
         ? h.present.elements.map((e) => (e.id === el.id ? el : e)) // 同 id 视为重画
         : [...h.present.elements, el];
+      // TODO(executor): 同 id 重画无条件 push 快照 → past 会膨胀。语义未定:重画是否应等价 modify(同栈不增长)?待 review 确认。
       return { history: push(h, { elements }) };
     }
     case "modify": {

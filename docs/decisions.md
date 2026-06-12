@@ -46,6 +46,7 @@
 - **决策**:SSE token 事件 content 修订为完整 DrawCommand 对象(每事件一条命令),后端攒齐再发,不透传原始 token
 - **原因**:前端逐命令执行+描边动画要求事件原子性,半条 JSON 不可执行;三事件结构(token/done/error)与前端骨架不变
 - **备选**:透传文本增量前端自行切分 JSON,未选因解析逻辑泄漏到前端且断流时半条命令难处理
+- **修订(T+15h)**:token 事件 data 为 DrawCommand 直读,取消 content 包装;op 定名 `draw`(弃 `add`),结构扁平化——以骨架实现为准回写契约
 
 ## 附 · 待实测项(开赛 2h 内,go/no-go)
 1. Web Speech API:10 句指令(见 tasks 阶段 0),≥8 句语义可辨 → 锁定;否则启用备胎 /api/transcribe(契约变更流程)
