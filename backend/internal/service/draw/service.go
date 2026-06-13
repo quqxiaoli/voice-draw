@@ -36,6 +36,13 @@ func (s *Service) StreamDraw(ctx context.Context, sessionID, instruction string)
 
 		p := parser.New()
 		var emitted []model.DrawCommand
+		// D13:已 emit 给前端的命令照常入会话上下文,不以整流成功为条件
+		// (流中错误 / 用户停止 / 正常结束 三路收口统一交给 defer)
+		defer func() {
+			if len(emitted) > 0 {
+				s.sessions.Append(sessionID, emitted)
+			}
+		}()
 
 		send := func(c model.DrawCommand) bool {
 			select {
@@ -76,10 +83,6 @@ func (s *Service) StreamDraw(ctx context.Context, sessionID, instruction string)
 				Op:      model.OpClarify,
 				Message: "没太听懂这条指令,试试「画一只猫」或「把它改成蓝色」?",
 			})
-		}
-
-		if ctx.Err() == nil {
-			s.sessions.Append(sessionID, emitted)
 		}
 		// 注:上下文只追加命令流(含 undo/clear 原样记录),不做画布状态重放。
 		// TODO(DS): 不要在这里加画布重建逻辑,指代消解交给 prompt 的 [最近命令] 语义。
