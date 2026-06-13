@@ -38,7 +38,8 @@ docker compose up      # 后端 :8080 / 前端 :3000
 - **PR#13** prompt 配色指引偏低饱和柔和;空态与绘制态画布尺寸一致
 - **PR#14** P2 清理:`DrawCommand.attrs` 前端类型对齐后端 `map[string]any` → `Record<string, unknown>`;processQueue 非 draw 间隙修复(间隙期入队等待);前端 500 字本地校验(避免后端 400);删除 5 处过期 module 名 TODO
 - **PR#15** 画布 SVG 铺满容器(preserveAspectRatio: slice),消除背景空白边
-- **PR#16** 部署补全(T+):补 backend/frontend Dockerfile(原计划 distroless,改 alpine 避国内 gcr.io 不可达;GOPROXY=goproxy.cn / npm registry=npmmirror);docker-compose.yml 移除 frontend NEXT_PUBLIC_API_BASE(改运行时拼接,见 PR#17);env.example 解开 LLM_API_KEY/BASE_URL/MODEL 必填项 + 删除无用 DEEPSEEK_API_KEY 行
+- **PR#17** 部署补全(T+):补 backend/frontend Dockerfile(原计划 distroless,改 alpine 避国内 gcr.io 不可达;GOPROXY=goproxy.cn / npm registry=npmmirror);docker-compose.yml 移除 frontend NEXT_PUBLIC_API_BASE(改运行时拼接,见后续公网兼容性 PR);env.example 解开 LLM_API_KEY/BASE_URL/MODEL 必填项 + 删除无用 DEEPSEEK_API_KEY 行
+- **PR#TBD-compat** 公网兼容性修复(D14):`frontend/lib/id.ts` 新增 `genId()`(crypto.randomUUID 优先,Math.random RFC4122 v4 降级),替换 page.tsx / useDrawing.ts 两处直调——公网裸 IP 明文非安全上下文下 `crypto.randomUUID` 不存在,直调使 React 树崩溃;`frontend/lib/stream.ts` `API_BASE` 改为运行时按 `window.location` 拼接,Turbopack 静态注入不稳 + 镜像与部署 IP 解耦
 
 ## review 修复状态
 - 全量 review(`docs/reviews/review-t23-full.md` 历史快照)P0/P1/P2/P5 全部修复并 merge

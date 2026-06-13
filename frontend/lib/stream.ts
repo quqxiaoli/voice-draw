@@ -3,8 +3,17 @@
 // 支持中断(AbortController)。与后端 handler/draw.go 三事件对齐。
 import type { DrawCommand, ApiError } from "./types";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
+// 后端地址运行时按当前页面 host 拼接,决策见 docs/decisions.md D14。
+// 不用 NEXT_PUBLIC_API_BASE:Next 16 Turbopack 对本项目静态注入不稳(实测烘不进产物),
+// 且 build-time 注入会把后端 IP 绑死在镜像里,换部署 IP 必须重新构建。
+// 运行时拼接 → 镜像与部署 IP 解耦,localhost / 公网裸 IP / 反代域名 三种部署形态零改动。
+function getApiBase(): string {
+  if (typeof window !== "undefined") {
+    return `${window.location.protocol}//${window.location.hostname}:8080`;
+  }
+  // SSR 兜底:本模块仅 client 端真实使用,此分支为类型/构建期占位
+  return "http://localhost:8080";
+}
 
 export interface StreamCallbacks {
   onCommand: (cmd: DrawCommand) => void;
@@ -31,7 +40,7 @@ export function streamDraw(
 
   void (async () => {
     try {
-      const resp = await fetch(`${API_BASE}/api/draw`, {
+      const resp = await fetch(`${getApiBase()}/api/draw`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_id: sessionId, instruction }),

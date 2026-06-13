@@ -13,6 +13,7 @@ import {
   emptyHistory,
   type DrawingHistory,
 } from "@/lib/executor";
+import { genId } from "@/lib/id";
 import type { DrawCommand } from "@/lib/types";
 
 /* ── 四态 ── */
@@ -181,7 +182,7 @@ export function useDrawing(sessionId: string): UseDrawingReturn {
       setPageState("streaming");
 
       // 指令历史
-      const itemId = crypto.randomUUID();
+      const itemId = genId();
       const item: HistoryItem = {
         id: itemId,
         instruction: trimmed,
