@@ -1,10 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { X } from "lucide-react";
 import Canvas from "@/components/Canvas";
 import InputBar from "@/components/InputBar";
 import CommandHistory from "@/components/CommandHistory";
 import { useDrawing } from "@/hooks/useDrawing";
+
+const SUCCESS_TOAST_MS = 3000;
 
 /* ── session_id:浏览器会话级唯一标识 ── */
 function getSessionId(): string {
@@ -29,11 +32,28 @@ export default function Page() {
     submitInstruction,
     stop,
     notifyAnimationDone,
+    dismissClarify,
+    dismissError,
   } = useDrawing(sessionId);
 
   const isStreaming = pageState === "streaming";
   const isIdle = pageState === "idle";
   const showEmpty = isIdle && history.present.elements.length === 0;
+
+  // success 提示条:进入 success 即显,3s 后淡出(150ms 过渡);clarify/error 由用户手动 ×
+  const [successToastVisible, setSuccessToastVisible] = useState(false);
+  useEffect(() => {
+    // setState 同步赋值是这里的本意:每次进入 success 都要立刻显示,然后由 timer 触发淡出
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (pageState !== "success") {
+      setSuccessToastVisible(false);
+      return;
+    }
+    setSuccessToastVisible(true);
+    const t = window.setTimeout(() => setSuccessToastVisible(false), SUCCESS_TOAST_MS);
+    return () => window.clearTimeout(t);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [pageState]);
 
   return (
     <main className="flex h-screen flex-col bg-background">
@@ -120,31 +140,47 @@ export default function Page() {
               <div className="pointer-events-none absolute inset-x-2 top-2 z-10 flex flex-col gap-2">
                 {pageState === "error" && (
                   <div
-                    className="pointer-events-auto flex items-center gap-3 rounded-[10px] px-4 py-3 text-sm shadow-sm"
+                    className="pointer-events-auto flex items-start gap-3 rounded-[10px] px-4 py-3 text-sm shadow-sm"
                     style={{ background: "var(--danger-soft)", color: "var(--danger)" }}
                   >
-                    <span className="text-base leading-none" aria-hidden="true">
+                    <span className="mt-0.5 text-base leading-none" aria-hidden="true">
                       ⚠
                     </span>
                     <span className="flex-1">
                       {errorMessage || "发生了一个错误,请重试"}
                     </span>
+                    <button
+                      type="button"
+                      onClick={dismissError}
+                      aria-label="关闭提示"
+                      className="-mr-1 -mt-1 shrink-0 rounded-[10px] p-1 opacity-70 transition-opacity hover:opacity-100"
+                    >
+                      <X className="size-4" aria-hidden="true" />
+                    </button>
                   </div>
                 )}
                 {clarifyMessage && pageState !== "error" && (
                   <div
-                    className="pointer-events-auto flex items-center gap-3 rounded-[10px] px-4 py-3 text-sm shadow-sm"
+                    className="pointer-events-auto flex items-start gap-3 rounded-[10px] px-4 py-3 text-sm shadow-sm"
                     style={{ background: "var(--accent-soft)", color: "var(--brand)" }}
                   >
-                    <span className="text-base leading-none" aria-hidden="true">
+                    <span className="mt-0.5 text-base leading-none" aria-hidden="true">
                       💡
                     </span>
                     <span className="flex-1">{clarifyMessage}</span>
+                    <button
+                      type="button"
+                      onClick={dismissClarify}
+                      aria-label="关闭提示"
+                      className="-mr-1 -mt-1 shrink-0 rounded-[10px] p-1 opacity-70 transition-opacity hover:opacity-100"
+                    >
+                      <X className="size-4" aria-hidden="true" />
+                    </button>
                   </div>
                 )}
                 {pageState === "success" && !clarifyMessage && (
                   <div
-                    className="pointer-events-auto flex items-center gap-3 rounded-[10px] px-4 py-3 text-sm shadow-sm"
+                    className={`pointer-events-auto flex items-center gap-3 rounded-[10px] px-4 py-3 text-sm shadow-sm transition-opacity duration-150 ${successToastVisible ? "opacity-100" : "opacity-0"}`}
                     style={{ background: "var(--accent-soft)", color: "var(--brand)" }}
                   >
                     <span className="text-base leading-none" aria-hidden="true">

@@ -86,15 +86,15 @@ export default function InputBar({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex items-center gap-4 rounded-[10px] border border-border bg-card px-5 py-4"
+      className="flex min-h-[5.5rem] items-center gap-4 rounded-[10px] border border-border bg-card px-5 py-4"
     >
-      {/* 麦克风按钮 — 不支持则隐藏 */}
+      {/* 麦克风按钮 — 不支持则隐藏。wrapper 显式 size-14 锁定,防止 isListening 时呼吸圈/状态切换引发任何尺寸抖动 */}
       {isSupported && (
-        <div className="relative shrink-0">
-          {/* 呼吸光圈(仅录音时显示) */}
+        <div className="relative size-14 shrink-0">
+          {/* 呼吸光圈(仅录音时显示):absolute + transform-only,不挤占布局 */}
           {isListening && (
             <span
-              className="animate-mic-breathe absolute inset-0 rounded-full bg-primary/20"
+              className="animate-mic-breathe pointer-events-none absolute inset-0 rounded-full bg-primary/20"
               aria-hidden="true"
             />
           )}
