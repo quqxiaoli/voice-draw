@@ -51,12 +51,15 @@ func (h *DrawHandler) Stream(c *gin.Context) {
 	var ok bool
 	select {
 	case first, ok = <-cmds:
-		if !ok { // 一个命令都没有就关了 → 必有错误等着
-			err := <-errs
-			log.Printf("[handler] pre-stream llm error: %v", err)
-			c.JSON(http.StatusBadGateway, ErrorResponse{
-				Error: "UPSTREAM_ERROR", Message: "AI 服务暂时不可用,请稍后重试",
-			})
+		if !ok { // cmds 关闭无命令:正常路径 errs 必有值;ctx 取消竞态下可能无值,双路守避免 goroutine 永久阻塞
+			select {
+			case err := <-errs:
+				log.Printf("[handler] pre-stream llm error: %v", err)
+				c.JSON(http.StatusBadGateway, ErrorResponse{
+					Error: "UPSTREAM_ERROR", Message: "AI 服务暂时不可用,请稍后重试",
+				})
+			case <-ctx.Done():
+			}
 			return
 		}
 	case err := <-errs:

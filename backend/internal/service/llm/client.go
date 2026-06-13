@@ -90,7 +90,13 @@ func (c *Client) StreamChat(ctx context.Context, messages []Message) (<-chan str
 			errs <- fmt.Errorf("marshal request: %w", err)
 			return
 		}
-		url := strings.TrimRight(c.cfg.BaseURL, "/") + "/v1/chat/completions"
+		// LLM_BASE_URL 约定:支持带/不带 /v1 后缀两种写法(.env.example 已注明)
+		base := strings.TrimRight(c.cfg.BaseURL, "/")
+		suffix := "/v1/chat/completions"
+		if strings.HasSuffix(base, "/v1") {
+			suffix = "/chat/completions"
+		}
+		url := base + suffix
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 		if err != nil {
 			errs <- fmt.Errorf("build request: %w", err)
@@ -113,32 +119,73 @@ func (c *Client) StreamChat(ctx context.Context, messages []Message) (<-chan str
 			return
 		}
 
-		scanner := bufio.NewScanner(resp.Body)
-		scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if !strings.HasPrefix(line, "data:") {
-				continue
+		// 读 SSE 行送 lines;主循环以 30s 空闲计时器侦测上游卡死
+		lines := make(chan string, 16)
+		var scanErr error
+		go func() {
+			defer close(lines)
+			scanner := bufio.NewScanner(resp.Body)
+			scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+			for scanner.Scan() {
+				select {
+				case lines <- scanner.Text():
+				case <-ctx.Done():
+					return
+				}
 			}
-			data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-			if data == "" || data == "[DONE]" {
-				continue
+			if err := scanner.Err(); err != nil && ctx.Err() == nil {
+				scanErr = err
 			}
-			var chunk chatChunk
-			if err := json.Unmarshal([]byte(data), &chunk); err != nil {
-				continue // 单块解析失败跳过,不断流
+		}()
+
+		const idleTimeout = 30 * time.Second
+		idle := time.NewTimer(idleTimeout)
+		defer idle.Stop()
+		resetIdle := func() {
+			if !idle.Stop() {
+				select {
+				case <-idle.C:
+				default:
+				}
 			}
-			if len(chunk.Choices) == 0 || chunk.Choices[0].Delta.Content == "" {
-				continue
-			}
+			idle.Reset(idleTimeout)
+		}
+
+		for {
 			select {
-			case tokens <- chunk.Choices[0].Delta.Content:
 			case <-ctx.Done():
 				return
+			case <-idle.C:
+				errs <- fmt.Errorf("UPSTREAM_TIMEOUT: no data from upstream for %s", idleTimeout)
+				return
+			case line, ok := <-lines:
+				if !ok { // 内层 goroutine 已退出(正常 EOF 或读取失败)
+					if scanErr != nil {
+						errs <- fmt.Errorf("llm stream read: %w", scanErr)
+					}
+					return
+				}
+				if !strings.HasPrefix(line, "data:") {
+					continue
+				}
+				data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+				if data == "" || data == "[DONE]" {
+					continue
+				}
+				var chunk chatChunk
+				if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+					continue // 单块解析失败跳过,不断流
+				}
+				if len(chunk.Choices) == 0 || chunk.Choices[0].Delta.Content == "" {
+					continue
+				}
+				resetIdle()
+				select {
+				case tokens <- chunk.Choices[0].Delta.Content:
+				case <-ctx.Done():
+					return
+				}
 			}
-		}
-		if err := scanner.Err(); err != nil && ctx.Err() == nil {
-			errs <- fmt.Errorf("llm stream read: %w", err)
 		}
 	}()
 
