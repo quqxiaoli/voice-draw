@@ -10,7 +10,8 @@ export interface DrawCommand {
   op: Op;
   id?: string;
   shape?: Shape;
-  attrs?: Record<string, string | number>;
+  // 与后端 map[string]any 对齐:LLM 可能吐 bool/嵌套,用 unknown 不撒谎,渲染层按需收窄
+  attrs?: Record<string, unknown>;
   message?: string;
 }
 

@@ -47,6 +47,8 @@ export interface UseDrawingReturn {
 const NON_DRAW_GAP = 150;
 /** draw 命令动画完成后的间隙(ms) */
 const DRAW_GAP = 100;
+/** 指令最大字符数,与 backend handler binding:"max=500" 对齐(api-contract.md) */
+const MAX_INSTRUCTION_LENGTH = 500;
 
 export function useDrawing(sessionId: string): UseDrawingReturn {
   const [pageState, setPageState] = useState<PageState>("idle");
@@ -114,11 +116,13 @@ export function useDrawing(sessionId: string): UseDrawingReturn {
       waitingDrawRef.current = true;
       processingRef.current = false;
     } else {
-      // 非 draw:短间隙后处理下一条
-      processingRef.current = false;
+      // 非 draw:间隙期保持 processingRef=true,让间隙内 onCommand 到达的命令也入队等待,
+      // 避免连发 modify/delete 时新命令绕过节奏立即执行(节奏塌缩)。
       const phase = ++phaseRef.current;
       setTimeout(() => {
-        if (phase === phaseRef.current) processQueue();
+        if (phase !== phaseRef.current) return;
+        processingRef.current = false;
+        processQueue();
       }, NON_DRAW_GAP);
     }
   }, []);
@@ -151,6 +155,12 @@ export function useDrawing(sessionId: string): UseDrawingReturn {
       const trimmed = text.trim();
       if (!trimmed) return;
       if (pageStateRef.current === "streaming") return;
+      // 本地长度校验:超 500 字符不发请求,本地柔和提示,避免触发后端 400 INVALID_INPUT。
+      // 字符数按 rune(代码点)计,与后端 go-playground/validator max 语义对齐
+      if ([...trimmed].length > MAX_INSTRUCTION_LENGTH) {
+        setClarifyMessage("指令过长请精简");
+        return;
+      }
       // 同步占位,挡住同事件循环内的二次提交(setPageState 异步,光靠 React state 来不及)
       pageStateRef.current = "streaming";
 

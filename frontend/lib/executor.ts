@@ -6,7 +6,7 @@ import type { DrawCommand } from "./types";
 export interface CanvasElement {
   id: string;
   shape: NonNullable<DrawCommand["shape"]>;
-  attrs: Record<string, string | number>;
+  attrs: Record<string, unknown>;
 }
 
 export interface CanvasState {

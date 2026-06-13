@@ -17,9 +17,9 @@ function toCamel(key: string): string {
 }
 
 function camelizeAttrs(
-  attrs: Record<string, string | number>,
-): Record<string, string | number> {
-  const out: Record<string, string | number> = {};
+  attrs: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(attrs)) {
     out[toCamel(k)] = v;
   }
@@ -110,7 +110,7 @@ function ShapeEl({
   const common = {
     ref: ref as never,
     stroke: (cAttrs.stroke as string) ?? "#3D3D3D",
-    strokeWidth: cAttrs.strokeWidth ?? 3,
+    strokeWidth: (cAttrs.strokeWidth as string | number | undefined) ?? 3,
     fill: (cAttrs.fill as string) ?? "none",
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,

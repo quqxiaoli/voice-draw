@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/joho/godotenv"
-	"github.com/quqxiaoli/voice-draw/backend/internal/handler" // TODO(DS): 对齐 go.mod 实际 module 名
+	"github.com/quqxiaoli/voice-draw/backend/internal/handler"
 	"github.com/quqxiaoli/voice-draw/backend/internal/middleware"
 	"github.com/quqxiaoli/voice-draw/backend/internal/repository/session"
 	"github.com/quqxiaoli/voice-draw/backend/internal/service/draw"
