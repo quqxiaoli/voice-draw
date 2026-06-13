@@ -5,7 +5,7 @@
 
 ## 本地如何跑起来(常驻,变了就更新)
 ```bash
-cp .env.example .env   # 填入 LLM_API_KEY(DeepSeek)
+cp env.example .env    # 填入 DEEPSEEK_API_KEY,key 绝不进仓库
 docker compose up      # 后端 :8080 / 前端 :3000
 ```
 单独起服务(联调常用):
@@ -14,34 +14,46 @@ docker compose up      # 后端 :8080 / 前端 :3000
 - 后端冒烟: curl localhost:8080/api/health → {"status":"ok"}
 
 ## 当前状态
-- **阶段**:阶段 2 · 核心闭环(后端主链路已通,前端缺页面壳与接线)
-- **最后更新**:06-12 下午(T+15h 左右)
-- **更新人/工具**:本人 + 架构窗口
+- **阶段**:阶段 4 · 收口期(核心闭环已通,review 全部修复 merge,剩部署 + demo 录制)
+- **最后更新**:2026-06-13
+- **更新人/工具**:Claude(按 main 代码现状回扫文档)
 
 ## 正在做
-- 无(静态壳已落库,待接线 PR)
+- 无;等待人手推进部署 + demo 录制
 
-## 已完成(最近几项)
-- 骨架三 PR 已 merge,main 可编译可运行:
-  - PR-A 后端编译链:DrawCommand DSL(model/command.go)、系统 prompt、LLM 流式 client(OpenAI 兼容,env 切供应商)、NDJSON 增量解析器
-  - PR-B /api/draw SSE 接口:SessionStore(内存,最近20条)、draw service 编排、SSE handler(token/done/error 三事件)、main 接线 + CORS 最小版 + godotenv
-  - PR-C 前端绘图引擎:types.ts(契约类型)/ stream.ts(SSE 客户端,fetch 手解,带中断)/ executor.ts(命令执行器,快照栈 undo)/ Canvas.tsx(描边动画)
-- 后端主链路 curl 实测通过:"画一个红色的圆" → token 事件流 + done
-- 决策 D12(取消实测,假设化推进:DeepSeek 主选 / 混合指令策略 / 文本框降级通道)已记 decisions.md
-- 静态壳落库:globals.css 替换为 ui-spec 设计 token;创建 InputBar/CommandHistory/page.tsx(page.tsx 含四态 + mock 演示 + Canvas 描边动画);layout.tsx 改标题和 lang;v0-draft 已删除
+## 已完成里程碑(按 PR 时序)
+- **PR#1** 模板导入(/docs 全套 + 脚手架 + compose + env.example)
+- **PR#2** 后端编译链:DSL(model/command.go)+ 系统 prompt + LLM 流式 client(OpenAI 兼容)+ NDJSON 增量解析器
+- **PR#3** /api/draw SSE 接口:SessionStore 内存版(最近 20 条)+ draw service 编排 + handler 三事件 + main 接线 + CORS 最小版 + godotenv
+- **PR#4** 前端绘图引擎:types.ts(契约)/ stream.ts(fetch 手解 SSE,带中断)/ executor.ts(快照栈 undo)/ Canvas.tsx(描边动画)
+- **PR#5** docs:回填 D12 假设化决策、更新骨架三 PR 进度快照
+- **PR#6** v0 静态壳落库:globals.css 替换为 ui-spec 设计 token;page.tsx 四态 + mock 描边演示;InputBar / CommandHistory / layout
+- **PR#7** 接通主链路:useDrawing hook(streamDraw → applyCommand → animateIds 命令队列定节拍)+ useSpeech(Web Speech 累积式 + 静默去抖)+ 文本/语音同链路 + 停止按钮 + session_id 入 sessionStorage;附 review 修正:流式中断竞态、animateIds 生命周期、Canvas onAnimationDone 回调、SVG 属性 kebab→camel、终止路径状态收尾
+- **PR#8** 打磨批次 1:clarify 一句话约束、画布与历史固定高度独立滚动、收紧 clear 触发语义
+- **PR#9** 打磨批次 2:语音重写为"累积 + 静默去抖" + 麦克风开关式提交、提示条 overlay 化消除布局跳变、提交竞态收口(单一入口 + pageStateRef 守卫)
+- **PR#10** SSE 链路硬化:首事件阻塞泄漏修复、base_url 智能拼接、流空闲超时;**D13** 会话上下文按"实际 emit"追加(部分成功不丢上下文)
+- **PR#11** 打磨批次 3:提示条 3s 自动淡出 + 手动 × 关闭、识别态布局稳定、token 对齐
+- **PR#12** P5 修复:CustomRecovery 统一 panic 响应;SessionStore TTL(2h)+ 惰性 sweep(5min throttle)
+- **PR#13** prompt 配色指引偏低饱和柔和;空态与绘制态画布尺寸一致
+- **PR#14** P2 清理:`DrawCommand.attrs` 前端类型对齐后端 `map[string]any` → `Record<string, unknown>`;processQueue 非 draw 间隙修复(间隙期入队等待);前端 500 字本地校验(避免后端 400);删除 5 处过期 module 名 TODO
+- **PR#15** 画布 SVG 铺满容器(preserveAspectRatio: slice),消除背景空白边
 
-## 下一步(严格按序)
-1. [手] v0 出静态壳 — ✅ 完成
-2. [DS·B级] 静态壳落库 PR — ✅ 完成(本任务)
-3. [DS·A级] 接线 PR:useDrawing hook(streamDraw → applyCommand → animateIds)+ Web Speech hook(zh-CN, interimResults)+ 文本框同链路 + 流式中禁用/停止按钮;session_id 用 crypto.randomUUID() 存 sessionStorage —— merge 前过一次 Claude Code review(对照 api-contract 三事件)
-4. 联调:"画一个房子→把它改成蓝色→撤销"三连,键盘 + 语音各一遍
-5. DS 杂务队列(不阻塞主线,穿插做):parser 表驱动测试 / session TTL / CORS 白名单化 / smoke.sh
+## review 修复状态
+- 全量 review(`docs/reviews/review-t23-full.md` 历史快照)P0/P1/P2/P5 全部修复并 merge
+- 主链路 SSE 三事件、命令队列节拍、四态切换、提示条、TTL 惰性清理全部对齐契约
+
+## 下一步(严格按序,阶段 4 收口)
+1. [手] 公网部署(赛前已彩排,`docker compose up` 一条命令拉起)
+2. [手] 主链路回归实跑:键盘 + 语音各跑一遍"画一个房子→把它改成蓝色→撤销" + 雪人 demo
+3. [手] demo 视频:**T+66h 前开录**,演示词参 tasks.md 阶段 4 "主链路演示词"
+4. [手] 官方设计文档定稿:指令集 V1 计划 vs 最终实现 + 砍掉清单原因 + 成本控制章节 + 编译器架构叙事
+5. [手] README:公网链接 + demo 视频链接顶部;`docker compose up` 复现说明;声明桌面 Chrome 环境
+6. [手] git 历史复核(无密钥/无 .env/commit 分布连续)+ 仓库公开终查
+7. [手] LLM API 余额保持存活至评审结果公布
 
 ## 当前阻塞 / 待人确认
-- 无阻塞。LLM 实际画图质量未验证(D12 已兜底:原语保底 + demo 选题权在手),接线跑通后第一时间用 猫/树/房子/五角星/波浪线 五连测,结果回填 decisions 附录
-- DS 落库时注意:骨架代码中 TODO(DS) 共 5 处,见 main 分支 grep "TODO(DS)"
+- 无阻塞
 
 ## Claude 弹药余量
-- 已用:约 3 / 8–10 满窗口(架构+契约 ≈1.5,骨架首发+流程支持 ≈1.5)
-- 应急储备(1发)是否还在:☑
-- 预算提醒:核心 review 剩 1.5–2 发(接线 PR 用 0.5–1),联调攻坚预留 1.5–2 发,架构窗口此后只接:契约变更/架构冲突/联调爆雷
+- 已用:架构+契约 ≈1.5,骨架首发 ≈1.5,review/修复批次(打磨 1-3 + SSE 硬化 + P5 + P2) ≈3,文档回扫 ≈0.5
+- 剩余:应急储备 1–2 发,只接契约变更 / 架构冲突 / 联调爆雷
