@@ -37,6 +37,10 @@ export interface UseDrawingReturn {
   stop: () => void;
   /** Canvas 描完一笔后回调,从动画集移除该 id 并推进命令队列 */
   notifyAnimationDone: (id: string) => void;
+  /** 关闭 clarify 提示条(用户点 ×) */
+  dismissClarify: () => void;
+  /** 关闭 error 提示条:清错误信息并回到 idle,允许重新提交 */
+  dismissError: () => void;
 }
 
 /** 非 draw 命令的出队间隙(ms) */
@@ -250,6 +254,15 @@ export function useDrawing(sessionId: string): UseDrawingReturn {
     currentItemRef.current = null;
   }, []);
 
+  const dismissClarify = useCallback(() => {
+    setClarifyMessage("");
+  }, []);
+
+  const dismissError = useCallback(() => {
+    setErrorMessage("");
+    setPageState((prev) => (prev === "error" ? "idle" : prev));
+  }, []);
+
   return {
     pageState,
     history,
@@ -260,5 +273,7 @@ export function useDrawing(sessionId: string): UseDrawingReturn {
     submitInstruction,
     stop,
     notifyAnimationDone,
+    dismissClarify,
+    dismissError,
   };
 }

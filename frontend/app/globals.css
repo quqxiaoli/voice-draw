@@ -150,10 +150,10 @@
   }
 }
 
-/* ── 麦克风呼吸光圈动画 ── */
+/* ── 麦克风呼吸光圈动画:scale 上限收敛到 1.2,确保光圈始终落在 InputBar 内边距(py-4=16px)内,不向上溢出到画布区域 ── */
 @keyframes mic-breathe {
   0%, 100% { transform: scale(1); opacity: 0.3; }
-  50% { transform: scale(1.35); opacity: 0.6; }
+  50% { transform: scale(1.2); opacity: 0.6; }
 }
 
 .animate-mic-breathe {
