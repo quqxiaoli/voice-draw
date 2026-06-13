@@ -125,9 +125,9 @@ export default function Page() {
                 </div>
               </div>
 
-              {/* Canvas */}
+              {/* Canvas:与空态同容器叠放、同背景,opacity 切换消除尺寸跳变 */}
               <div
-                className={`absolute inset-0 rounded-[10px] overflow-hidden transition-opacity duration-150 ${showEmpty ? "pointer-events-none opacity-0" : "opacity-100"}`}
+                className={`absolute inset-0 rounded-[10px] overflow-hidden bg-secondary transition-opacity duration-150 ${showEmpty ? "pointer-events-none opacity-0" : "opacity-100"}`}
               >
                 <Canvas
                   state={history.present}

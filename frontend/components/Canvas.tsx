@@ -39,7 +39,7 @@ export default function Canvas({ state, animateIds, onAnimationDone }: CanvasPro
     <svg
       viewBox="0 0 1000 750"
       preserveAspectRatio="xMidYMid meet"
-      className="h-full w-full"
+      className="block h-full w-full"
       role="img"
       aria-label="绘图画布"
     >
