@@ -6,6 +6,7 @@ import Canvas from "@/components/Canvas";
 import InputBar from "@/components/InputBar";
 import CommandHistory from "@/components/CommandHistory";
 import { useDrawing } from "@/hooks/useDrawing";
+import { genId } from "@/lib/id";
 
 const SUCCESS_TOAST_MS = 3000;
 
@@ -14,7 +15,7 @@ function getSessionId(): string {
   if (typeof window === "undefined") return "";
   const stored = sessionStorage.getItem("voice_draw_session_id");
   if (stored) return stored;
-  const id = crypto.randomUUID();
+  const id = genId();
   sessionStorage.setItem("voice_draw_session_id", id);
   return id;
 }
