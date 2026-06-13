@@ -98,8 +98,7 @@ export default function Page() {
               )}
             </header>
 
-            {/* 画布主区:空态/Canvas 同容器叠放,opacity 切换,容器高度恒定;
-                提示条 overlay 浮在顶部,不挤压主区域(消除提交瞬间布局跳变) */}
+            {/* 画布主区:空态/Canvas 同容器叠放,opacity 切换;SVG slice 铺满,无空白边 */}
             <div className="relative flex-1 min-h-0">
               {/* 空态 */}
               <div
