@@ -26,18 +26,10 @@ type drawRequest struct {
 	Instruction string `json:"instruction" binding:"required,max=500"`
 }
 
-// ErrorResponse 对齐 constitution §10。
-// TODO(DS): 若脚手架已有同名结构/全局错误中间件,合并为一处定义,删掉这里。
-type ErrorResponse struct {
-	Error   string `json:"error"`
-	Message string `json:"message"`
-	Details any    `json:"details,omitempty"`
-}
-
 func (h *DrawHandler) Stream(c *gin.Context) {
 	var req drawRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{
+		c.JSON(http.StatusBadRequest, model.ErrorResponse{
 			Error: "INVALID_INPUT", Message: "请输入一条绘图指令(不超过 500 字)",
 		})
 		return
@@ -55,7 +47,7 @@ func (h *DrawHandler) Stream(c *gin.Context) {
 			select {
 			case err := <-errs:
 				log.Printf("[handler] pre-stream llm error: %v", err)
-				c.JSON(http.StatusBadGateway, ErrorResponse{
+				c.JSON(http.StatusBadGateway, model.ErrorResponse{
 					Error: "UPSTREAM_ERROR", Message: "AI 服务暂时不可用,请稍后重试",
 				})
 			case <-ctx.Done():
@@ -64,7 +56,7 @@ func (h *DrawHandler) Stream(c *gin.Context) {
 		}
 	case err := <-errs:
 		log.Printf("[handler] pre-stream llm error: %v", err)
-		c.JSON(http.StatusBadGateway, ErrorResponse{
+		c.JSON(http.StatusBadGateway, model.ErrorResponse{
 			Error: "UPSTREAM_ERROR", Message: "AI 服务暂时不可用,请稍后重试",
 		})
 		return
@@ -80,7 +72,7 @@ func (h *DrawHandler) Stream(c *gin.Context) {
 	w.Header().Set("X-Accel-Buffering", "no") // 反代关缓冲(部署模板已配,双保险)
 	flusher, canFlush := w.(http.Flusher)
 	if !canFlush {
-		c.JSON(http.StatusInternalServerError, ErrorResponse{
+		c.JSON(http.StatusInternalServerError, model.ErrorResponse{
 			Error: "STREAM_UNSUPPORTED", Message: "服务暂不可用",
 		})
 		return
@@ -104,7 +96,7 @@ func (h *DrawHandler) Stream(c *gin.Context) {
 	select {
 	case err := <-errs: // 流中出错 → error 事件后关流
 		log.Printf("[handler] mid-stream llm error: %v", err)
-		writeEvent("error", ErrorResponse{
+		writeEvent("error", model.ErrorResponse{
 			Error: "UPSTREAM_ERROR", Message: "生成中断,请重试这条指令",
 		})
 	default:

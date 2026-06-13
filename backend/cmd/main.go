@@ -11,6 +11,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/quqxiaoli/voice-draw/backend/internal/handler" // TODO(DS): 对齐 go.mod 实际 module 名
+	"github.com/quqxiaoli/voice-draw/backend/internal/middleware"
 	"github.com/quqxiaoli/voice-draw/backend/internal/repository/session"
 	"github.com/quqxiaoli/voice-draw/backend/internal/service/draw"
 	"github.com/quqxiaoli/voice-draw/backend/internal/service/llm"
@@ -27,7 +28,8 @@ func main() {
 	svc := draw.NewService(llm.NewClient(cfg), store)
 	drawHandler := handler.NewDrawHandler(svc)
 
-	r := gin.Default() // TODO(DS, B级): 换脚手架的 CustomRecovery + 全局错误中间件
+	r := gin.New()
+	r.Use(gin.Logger(), middleware.CustomRecovery()) // panic 走统一 ErrorResponse,堆栈只进日志
 
 	// 前端直连后端(decisions:流式页面直连),跨域必须放行,否则联调必炸
 	// TODO(DS, B级): 收敛为白名单中间件(env FRONTEND_ORIGIN),现为最小可用版
