@@ -11,7 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/quqxiaoli/voice-draw/backend/internal/model" // TODO(DS): 对齐 go.mod 实际 module 名
+	"github.com/quqxiaoli/voice-draw/backend/internal/model"
 	"github.com/quqxiaoli/voice-draw/backend/internal/service/draw"
 )
 

@@ -8,7 +8,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/quqxiaoli/voice-draw/backend/internal/model" // TODO(DS): 对齐 go.mod 实际 module 名
+	"github.com/quqxiaoli/voice-draw/backend/internal/model"
 )
 
 type Parser struct {

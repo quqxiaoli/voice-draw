@@ -6,7 +6,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/quqxiaoli/voice-draw/backend/internal/model" // TODO(DS): 对齐 go.mod 实际 module 名
+	"github.com/quqxiaoli/voice-draw/backend/internal/model"
 	"github.com/quqxiaoli/voice-draw/backend/internal/repository/session"
 	"github.com/quqxiaoli/voice-draw/backend/internal/service/llm"
 	"github.com/quqxiaoli/voice-draw/backend/internal/service/parser"
