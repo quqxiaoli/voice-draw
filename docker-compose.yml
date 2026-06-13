@@ -1,5 +1,4 @@
-# 评委一条命令复现:cp .env.example .env 填 key 后 docker compose up
-# 赛前 6.11 需在本机 + 服务器各实测一次(清单第 9/11 项)
+# 评委一条命令复现:cp env.example .env 填 key 后 docker compose up
 services:
   backend:
     build: ./backend
@@ -11,12 +10,11 @@ services:
     restart: unless-stopped
 
   frontend:
+    # 后端地址在浏览器端按 window.location 运行时拼接(见 frontend/lib/stream.ts),
+    # 无需 NEXT_PUBLIC_API_BASE build arg / env,换部署 IP 无需重新构建镜像
     build: ./frontend
     ports:
       - "3000:3000"
-    environment:
-      # 流式页面浏览器直连后端(见 constitution 第 11 节),这里是给浏览器用的公网地址
-      - NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE:-http://localhost:8080}
     depends_on:
       - backend
     restart: unless-stopped

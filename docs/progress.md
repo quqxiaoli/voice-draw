@@ -14,12 +14,13 @@ docker compose up      # 后端 :8080 / 前端 :3000
 - 后端冒烟: curl localhost:8080/api/health → {"status":"ok"}
 
 ## 当前状态
-- **阶段**:阶段 4 · 收口期(核心闭环已通,review 全部修复 merge,剩部署 + demo 录制)
+- **阶段**:阶段 4 · 收口期(核心闭环已通,公网部署已上线,剩 demo 录制 + README 终稿)
 - **最后更新**:2026-06-13
-- **更新人/工具**:Claude(按 main 代码现状回扫文档)
+- **更新人/工具**:Claude(T+ 部署修复回扫)
+- **公网地址**:http://115.159.64.53:3000
 
 ## 正在做
-- 无;等待人手推进部署 + demo 录制
+- 无;等待人手推进 demo 录制 + README 终稿
 
 ## 已完成里程碑(按 PR 时序)
 - **PR#1** 模板导入(/docs 全套 + 脚手架 + compose + env.example)
@@ -37,13 +38,14 @@ docker compose up      # 后端 :8080 / 前端 :3000
 - **PR#13** prompt 配色指引偏低饱和柔和;空态与绘制态画布尺寸一致
 - **PR#14** P2 清理:`DrawCommand.attrs` 前端类型对齐后端 `map[string]any` → `Record<string, unknown>`;processQueue 非 draw 间隙修复(间隙期入队等待);前端 500 字本地校验(避免后端 400);删除 5 处过期 module 名 TODO
 - **PR#15** 画布 SVG 铺满容器(preserveAspectRatio: slice),消除背景空白边
+- **PR#16** 部署补全(T+):补 backend/frontend Dockerfile(原计划 distroless,改 alpine 避国内 gcr.io 不可达;GOPROXY=goproxy.cn / npm registry=npmmirror);docker-compose.yml 移除 frontend NEXT_PUBLIC_API_BASE(改运行时拼接,见 PR#17);env.example 解开 LLM_API_KEY/BASE_URL/MODEL 必填项 + 删除无用 DEEPSEEK_API_KEY 行
 
 ## review 修复状态
 - 全量 review(`docs/reviews/review-t23-full.md` 历史快照)P0/P1/P2/P5 全部修复并 merge
 - 主链路 SSE 三事件、命令队列节拍、四态切换、提示条、TTL 惰性清理全部对齐契约
 
 ## 下一步(严格按序,阶段 4 收口)
-1. [手] 公网部署(赛前已彩排,`docker compose up` 一条命令拉起)
+1. [x] 公网部署(`docker compose up` 一条命令拉起 → http://115.159.64.53:3000)
 2. [手] 主链路回归实跑:键盘 + 语音各跑一遍"画一个房子→把它改成蓝色→撤销" + 雪人 demo
 3. [手] demo 视频:**T+66h 前开录**,演示词参 tasks.md 阶段 4 "主链路演示词"
 4. [手] 官方设计文档定稿:指令集 V1 计划 vs 最终实现 + 砍掉清单原因 + 成本控制章节 + 编译器架构叙事
