@@ -76,7 +76,7 @@
 - 原因:上下文语义 = 前端画布认知镜像;部分成功后画布保留元素,后端不知则指代消解必然断裂("画一半停止再修改"场景 demo 必炸)
 - 备选:仅整流成功才 Append,未选因造成前后端画布认知分叉;前端回传实际执行清单,未选因增加契约面且后端 emit 列表已是同一信息
 
-## D14 · 前端→后端寻址策略(T+ 部署修复)
+## D14 · 前端→后端寻址策略(T+ 部署修复,commit `2e67b81` @ fix/public-ip-compat)
 - 决策:浏览器侧后端地址在运行时按 `${window.location.protocol}//${window.location.hostname}:8080` 拼接(见 frontend/lib/stream.ts `getApiBase`);不用 `NEXT_PUBLIC_API_BASE` 构建期注入,Dockerfile 与 compose 均不接受相关 build arg / env
 - 原因:① **Turbopack 静态注入不稳**:T+ 部署期实测 Next 16 Turbopack 在本项目对 `NEXT_PUBLIC_*` 替换不稳,值烘不进产物,导致前端起来后调 `undefined/api/draw`;② **构建期绑定 IP 反复刻**:即便注入成功,IP 也被烧进镜像,换部署 IP 必须重新 `docker build`,与"评委一条 `docker compose up` 复现"目标冲突;运行时拼接后,镜像在 localhost / 公网裸 IP / 反代域名三种形态下零改动
 - 备选:① `NEXT_PUBLIC_API_BASE` build 注入,未选因①+②;② 后端 Next API 路由反代 `/api/*` 到 :8080,未选因增加 next.config + 反代复杂度,而本项目就是同机两容器直连即可;③ 浏览器配置 UI 让用户填后端地址,未选因评委体验劣化

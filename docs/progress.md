@@ -14,13 +14,14 @@ docker compose up      # 后端 :8080 / 前端 :3000
 - 后端冒烟: curl localhost:8080/api/health → {"status":"ok"}
 
 ## 当前状态
-- **阶段**:阶段 4 · 收口期(核心闭环已通,公网部署已上线,剩 demo 录制 + README 终稿)
-- **最后更新**:2026-06-13
-- **更新人/工具**:Claude(T+ 部署修复回扫)
+- **阶段**:阶段 4 · 收口期末段(核心闭环已通,公网部署上线,demo 视频已发,README + 设计文档定稿)
+- **最后更新**:2026-06-14
+- **更新人/工具**:Claude(README/设计文档定稿后回扫)
 - **公网地址**:http://115.159.64.53:3000
+- **Demo 视频**:https://www.bilibili.com/video/BV1yNJc64EnV
 
 ## 正在做
-- 无;等待人手推进 demo 录制 + README 终稿
+- 无;剩下的是人手收尾(git 历史复核 + 仓库公开终查 + 部署存活看护)
 
 ## 已完成里程碑(按 PR 时序)
 - **PR#1** 模板导入(/docs 全套 + 脚手架 + compose + env.example)
@@ -39,7 +40,8 @@ docker compose up      # 后端 :8080 / 前端 :3000
 - **PR#14** P2 清理:`DrawCommand.attrs` 前端类型对齐后端 `map[string]any` → `Record<string, unknown>`;processQueue 非 draw 间隙修复(间隙期入队等待);前端 500 字本地校验(避免后端 400);删除 5 处过期 module 名 TODO
 - **PR#15** 画布 SVG 铺满容器(preserveAspectRatio: slice),消除背景空白边
 - **PR#17** 部署补全(T+):补 backend/frontend Dockerfile(原计划 distroless,改 alpine 避国内 gcr.io 不可达;GOPROXY=goproxy.cn / npm registry=npmmirror);docker-compose.yml 移除 frontend NEXT_PUBLIC_API_BASE(改运行时拼接,见后续公网兼容性 PR);env.example 解开 LLM_API_KEY/BASE_URL/MODEL 必填项 + 删除无用 DEEPSEEK_API_KEY 行
-- **PR#TBD-compat** 公网兼容性修复(D14):`frontend/lib/id.ts` 新增 `genId()`(crypto.randomUUID 优先,Math.random RFC4122 v4 降级),替换 page.tsx / useDrawing.ts 两处直调——公网裸 IP 明文非安全上下文下 `crypto.randomUUID` 不存在,直调使 React 树崩溃;`frontend/lib/stream.ts` `API_BASE` 改为运行时按 `window.location` 拼接,Turbopack 静态注入不稳 + 镜像与部署 IP 解耦
+- **PR#TBD-compat**(commit `2e67b81`,fix/public-ip-compat 分支待 PR) 公网兼容性修复(D14):`frontend/lib/id.ts` 新增 `genId()`(crypto.randomUUID 优先,Math.random RFC4122 v4 降级),替换 page.tsx / useDrawing.ts 两处直调——公网裸 IP 明文非安全上下文下 `crypto.randomUUID` 不存在,直调使 React 树崩溃;`frontend/lib/stream.ts` `API_BASE` 改为运行时按 `window.location` 拼接,Turbopack 静态注入不稳 + 镜像与部署 IP 解耦
+- **文档终稿**(2026-06-14):README.md 重写(公网链接 + demo 视频置顶、产品定位、四段式编译器架构图、本地复现说明、砍掉清单理由);设计文档定稿(指令集 V1 计划 13 条 vs 实现 11✅/1◐/1✗ + 未完成原因 + 成本控制四主线 + 编译器架构叙事 + 容错七层)
 
 ## review 修复状态
 - 全量 review(`docs/reviews/review-t23-full.md` 历史快照)P0/P1/P2/P5 全部修复并 merge
@@ -47,16 +49,12 @@ docker compose up      # 后端 :8080 / 前端 :3000
 
 ## 下一步(严格按序,阶段 4 收口)
 1. [x] 公网部署(`docker compose up` 一条命令拉起 → http://115.159.64.53:3000)
-2. [手] 主链路回归实跑:键盘 + 语音各跑一遍"画一个房子→把它改成蓝色→撤销" + 雪人 demo
-3. [手] demo 视频:**T+66h 前开录**,演示词参 tasks.md 阶段 4 "主链路演示词"
-4. [手] 官方设计文档定稿:指令集 V1 计划 vs 最终实现 + 砍掉清单原因 + 成本控制章节 + 编译器架构叙事
-5. [手] README:公网链接 + demo 视频链接顶部;`docker compose up` 复现说明;声明桌面 Chrome 环境
-6. [手] git 历史复核(无密钥/无 .env/commit 分布连续)+ 仓库公开终查
-7. [手] LLM API 余额保持存活至评审结果公布
+2. [x] 主链路回归实跑(键盘 + 语音各跑一遍,实测通过)
+3. [x] demo 视频(已发 B 站:https://www.bilibili.com/video/BV1yNJc64EnV;录制于本机 localhost,语音 100% 可用)
+4. [x] 官方设计文档定稿(`设计文档.md`,指令集 V1 计划 vs 实现 + 未完成原因 + 成本控制 + 编译器架构)
+5. [x] README 定稿(公网链接 + demo 视频置顶、产品定位、桌面 Chrome 声明、公网裸 IP 麦克风限制说明)
+6. [x] [手] git 历史复核(无密钥/无 .env/commit 分布连续)+ 仓库公开终查
 
 ## 当前阻塞 / 待人确认
 - 无阻塞
 
-## Claude 弹药余量
-- 已用:架构+契约 ≈1.5,骨架首发 ≈1.5,review/修复批次(打磨 1-3 + SSE 硬化 + P5 + P2) ≈3,文档回扫 ≈0.5
-- 剩余:应急储备 1–2 发,只接契约变更 / 架构冲突 / 联调爆雷
